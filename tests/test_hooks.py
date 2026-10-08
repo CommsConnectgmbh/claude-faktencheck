@@ -197,12 +197,12 @@ class PackageHook(unittest.TestCase):
     def test_missing_package_blocks(self):
         code, err, _ = run_paket("npm install react-supr-hooks-pro", {})
         self.assertEqual(code, 2)
-        self.assertIn("gibt es auf npm nicht", err)
+        self.assertIn("does not exist on npm", err)
 
     def test_young_package_blocks(self):
         code, err, _ = run_paket("pip install brandnew", {"brandnew": 3})
         self.assertEqual(code, 2)
-        self.assertIn("erst 3 Tage", err)
+        self.assertIn("only 3 days old", err)
 
     def test_large_document_counts_as_established(self):
         code, _, _ = run_paket("npm install next", {"next": "gross"})

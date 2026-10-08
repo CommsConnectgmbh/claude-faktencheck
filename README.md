@@ -1,14 +1,16 @@
-[English](README.en.md)
+[Deutsch](README.de.md)
 
 # claude-faktencheck
 
-**Weniger Halluzinationen in Claude Code. Belege verlangen, Paketnamen prüfen, Erfolgsmeldungen hinterfragen.**
+**Fewer hallucinations in Claude Code. Require evidence, check package names, question success claims.**
 
-claude-faktencheck ergänzt Claude Code um einen Belegpflicht-Modus, einen unabhängigen Prüf-Agenten und Hooks für Paketinstallationen und Schlussantworten. Kostenlos, unter MIT-Lizenz und ohne zusätzliche Python-Abhängigkeiten.
+claude-faktencheck adds an evidence-required mode, an independent fact-checking agent, and hooks for package installations and final responses to Claude Code. Free, MIT-licensed, and with no additional Python dependencies.
+
+The skill, agent, and hook messages are in English. The names stay German as part of the project’s identity: `/faktencheck`, `faktenpruefer`, and the `FAKTENCHECK_*` environment variables. *Faktencheck* means “fact check,” and *Faktenprüfer* means “fact checker.”
 
 ## Installation
 
-Voraussetzung: Claude Code und `python3`.
+Requirements: Claude Code and `python3`.
 
 ```bash
 git clone https://github.com/CommsConnectgmbh/claude-faktencheck
@@ -16,100 +18,100 @@ cd claude-faktencheck
 ./install.sh
 ```
 
-Der Installer kopiert Skill, Agent und auf Wunsch die Hooks nach `~/.claude`. Vor Änderungen an einer vorhandenen `settings.json` legt er `settings.json.bak-faktencheck` an. Hook-Einträge werden bei erneuter Installation nicht doppelt angelegt.
+The installer copies the skill, agent, and optionally the hooks into `~/.claude`. Before changing an existing `settings.json`, it creates a backup named `settings.json.bak-faktencheck`. Reinstalling does not create duplicate hook entries.
 
-Starte anschließend eine neue Claude-Code-Sitzung.
+Then start a new Claude Code session.
 
-## So nutzt du es
+## Usage
 
-Aktiviere die Belegpflicht in Claude Code:
+Enable evidence-required mode in Claude Code:
 
 ```text
 /faktencheck
 ```
 
-Claude soll Tatsachenbehauptungen mit Dateien, URLs oder Befehlsausgaben belegen, bei Dokumenten erst zitieren und dann auswerten und Zahlen per Skript berechnen. Fehlende Belege sollen als offen markiert werden. „Weiß ich nicht“ ist ausdrücklich erlaubt.
+Claude is instructed to support factual claims with files, URLs, or command output, quote documents before analyzing them, and calculate numbers using scripts. Missing evidence should be marked as unresolved. “I don't know” is explicitly allowed.
 
-Für eine unabhängige Prüfung:
+For an independent check:
 
 ```text
-Lass den faktenpruefer über die Antwort laufen.
+Ask faktenpruefer to check the response.
 ```
 
-Der Agent prüft mit frischem Kontext und liefert pro Behauptung **bestätigt**, **falsch** oder **nicht belegt**, jeweils mit Beleg. Er ändert nichts.
+The agent checks with fresh context and returns a verdict for each claim: **confirmed**, **false**, or **unsupported**, with supporting evidence. It makes no changes.
 
-Mit `Faktencheck aus` beendest du den Belegpflicht-Modus. Die Hooks bleiben davon unabhängig aktiv.
+Use `fact check off` or `Faktencheck aus` to end evidence-required mode. The hooks remain active independently.
 
-Optional: Übernimm die sechs Regeln aus [CLAUDE.faktencheck.md](templates/CLAUDE.faktencheck.md) in deine eigene `CLAUDE.md`.
+Optional: Add the six rules from [CLAUDE.faktencheck.md](templates/CLAUDE.faktencheck.md) to your own `CLAUDE.md`.
 
-## Was die Hooks prüfen
+## What the hooks check
 
-### Paketnamen vor der Installation
+### Package names before installation
 
-Der Bash-Hook [paket-check.py](hooks/paket-check.py) fragt die npm-Registry, PyPI oder crates.io ab, bevor erkannte Paketinstallationen ausgeführt werden.
+The Bash hook [paket-check.py](hooks/paket-check.py) queries the npm registry, PyPI, or crates.io before recognized package installation commands run.
 
-- **Paket existiert nicht:** Der Befehl wird blockiert.
-- **Paket ist jünger als 30 Tage:** Der Befehl wird blockiert. Die Schwelle ist über `FAKTENCHECK_MIN_TAGE` einstellbar.
+- **Package does not exist:** The command is blocked.
+- **Package is less than 30 days old:** The command is blocked. Adjust this threshold with `FAKTENCHECK_MIN_TAGE`.
 
-Erkannt werden Befehle mit npm, pnpm, yarn, bun, npx, bunx, pnpx, pip, pip3, `python -m pip`, uv, poetry, pipx, uvx und cargo, einschließlich `pip -r requirements.txt`.
+It recognizes commands using npm, pnpm, yarn, bun, npx, bunx, pnpx, pip, pip3, `python -m pip`, uv, poetry, pipx, uvx, and cargo, including `pip -r requirements.txt`.
 
-Befehle mit eigener Registry oder eigenem Paketindex (`--registry`, `--index-url`, Scope in `.npmrc`, `pip.conf`, uv- oder poetry-Quellen) prüft der Hook nicht. So gehen private Paketnamen nicht an öffentliche Registries.
+Commands that use their own registry or package index (`--registry`, `--index-url`, a scope in `.npmrc`, `pip.conf`, uv or poetry sources) are not checked, so private package names are never sent to public registries.
 
-Ein bewusst geprüftes Paket kannst du für einen einzelnen Befehl freigeben:
+After deliberately checking a package, you can allow it for a single command:
 
 ```bash
-FAKTENCHECK_OK=1 npm install paketname
+FAKTENCHECK_OK=1 npm install package-name
 ```
 
-Die Altersprüfung ist eine Bremsschwelle. Sie sagt nicht, ob ein Paket sicher ist.
+The age threshold introduces a pause for review. It does not tell you whether a package is safe.
 
-### Prüfschritte vor der Schlussantwort
+### Verification before the final response
 
-Der Stop-Hook [beleg-stopp.py](hooks/beleg-stopp.py) hält das Ende einer Antwort einmal an, wenn:
+The Stop hook [beleg-stopp.py](hooks/beleg-stopp.py) pauses the end of a response once when:
 
-- Code geändert wurde und danach kein erkannter Prüfschritt lief, etwa Test, Build, Lint, Skript, curl oder Browser.
-- Die Schlussantwort Erfolg behauptet, etwa „Tests grün“, „verifiziert“ oder „ist live“, obwohl im gesamten Turn kein Prüfschritt lief.
+- Code was changed without a subsequent recognized verification step, such as a test, build, lint run, script, curl request, or browser check.
+- The final response claims success, such as “all tests pass,” “verified,” or “is live,” even though no verification step ran during the entire turn.
 
-Claude erhält den Hinweis, zu prüfen oder die Aussage zurückzunehmen. Höchstens ein Anstoß pro Turn verhindert eine Schleife. Der Hook erkennt Prüfschritte; er bewertet nicht, ob deren Ergebnis die Behauptung tatsächlich belegt.
+Claude receives a reminder to verify the claim or retract it. At most one reminder per turn prevents a loop. The hook recognizes verification steps; it does not assess whether their results actually support the claim.
 
-## Warum Regeln und Hooks zusammengehören
+## Why combine rules and hooks?
 
-Eine Regel in der `CLAUDE.md` kann im langen Kontext übersehen werden. Hooks werden an den vorgesehenen Stellen ausgeführt und prüfen konkrete Bedingungen. Deshalb kombiniert dieses Repo Belegpflicht mit Prüfungen während des Agenten-Laufs.
+A rule in `CLAUDE.md` can be overlooked in a long context. Hooks run at their configured points and check concrete conditions. This repository therefore combines evidence requirements with checks during the agent's run.
 
-Erfundene Paketnamen sind ein dokumentiertes Problem: Eine [Studie zu Paket-Halluzinationen](https://arxiv.org/abs/2406.10279), veröffentlicht beim USENIX Security Symposium 2025, fand in 576.000 Code-Beispielen von 16 LLMs durchschnittlich mindestens 5,2 % halluzinierte Pakete bei kommerziellen Modellen. Das ist keine spezifische Messung für Claude Code. Registrieren Angreifer solche erfundenen Namen, spricht man von **Slopsquatting**.
+Invented package names are a documented problem: A [study of package hallucinations](https://arxiv.org/abs/2406.10279), published at the USENIX Security Symposium 2025, examined 576,000 code samples from 16 LLMs and found an average hallucinated-package rate of at least 5.2% for commercial models. This is not a measurement specific to Claude Code. When attackers register these invented names, the practice is called **slopsquatting**.
 
-Die Belegpflicht greift Empfehlungen aus Anthropics [Reduce hallucinations](https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations) auf: Unwissen zulassen, zuerst zitieren und unbelegte Behauptungen zurückziehen.
+The evidence requirements draw on Anthropic's [Reduce hallucinations](https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations) recommendations: allow uncertainty, quote first, and retract unsupported claims.
 
-[Hintergrund und Vergleich mit anderen Projekten](docs/was-wirklich-hilft.md)
+[Background and comparison with other projects](docs/what-actually-helps.md)
 
-## Grenzen
+## Limitations
 
-**Keine Garantie gegen Halluzinationen und keine Sicherheitsgrenze.** Beide Hooks lassen bei Fehlern durch; bei Netzfehlern blockiert der Paket-Check nicht. Die Hooks ersetzen keine inhaltliche Prüfung.
+**No guarantee against hallucinations and no security boundary.** Both hooks fail open on errors; network failures do not cause the package checker to block commands. The hooks do not replace substantive review.
 
-`FAKTENCHECK_AUS=1` deaktiviert beide Hooks als Umgebungsvariable. `Faktencheck aus` beendet dagegen nur den Skill-Modus.
+Setting the environment variable `FAKTENCHECK_AUS=1` disables both hooks. By contrast, `fact check off` or `Faktencheck aus` only ends the skill's evidence-required mode.
 
-## Installation anpassen oder entfernen
+## Customize or remove the installation
 
 ```bash
-./install.sh --yes        # Ohne Rückfragen, einschließlich Hooks
-./install.sh --no-hooks   # Nur Skill und Agent
-./install.sh --uninstall  # Eigene Hooks, Skill und Agent entfernen
+./install.sh --yes        # No prompts, including hooks
+./install.sh --no-hooks   # Skill and agent only
+./install.sh --uninstall  # Remove this project's hooks, skill, and agent
 ```
 
-Beim Uninstall entfernt der Installer nur seine eigenen Hook-Einträge aus der `settings.json`.
+During uninstall, the installer removes only its own hook entries from `settings.json`.
 
 ## Tests
 
-[36 Tests](tests/test_hooks.py) prüfen die Hooks ohne Netzwerkzugriff mit gemockten Registries. Sie benötigen nur die Python-Standardbibliothek. Die [GitHub-Actions-Konfiguration](.github/workflows/ci.yml) führt sie mit Python 3.9 und 3.12 aus.
+[36 tests](tests/test_hooks.py) check the hooks without network access using mocked registries. They require only the Python standard library. The [GitHub Actions configuration](.github/workflows/ci.yml) runs them with Python 3.9 and 3.12.
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
 
-## Mehr für dein Claude-Code-Setup
+## More for your Claude Code setup
 
-Das kostenlose Schwester-Repo [claude-starter-kit](https://github.com/CommsConnectgmbh/claude-starter-kit) liefert Skills, Agents und Vorlagen für dein Setup. claude-faktencheck ergänzt es um Belegpflicht und Prüf-Hooks.
+The free sister repository [claude-starter-kit](https://github.com/CommsConnectgmbh/claude-starter-kit) provides skills, agents, and templates for your setup. claude-faktencheck complements it with evidence requirements and verification hooks.
 
-Wenn dir das Projekt hilft, gib ihm einen ⭐ auf [GitHub](https://github.com/CommsConnectgmbh/claude-faktencheck).
+If this project helps you, give it a ⭐ on [GitHub](https://github.com/CommsConnectgmbh/claude-faktencheck).
 
-Von [Rainer Roloff](https://rainerroloff.de). [MIT-Lizenz](LICENSE), Copyright 2026 Rainer Roloff.
+By [Rainer Roloff](https://rainerroloff.de). [MIT License](LICENSE), Copyright 2026 Rainer Roloff.

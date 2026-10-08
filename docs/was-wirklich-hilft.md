@@ -1,3 +1,5 @@
+[English](what-actually-helps.md)
+
 # Was gegen Halluzinationen von Coding-Agenten wirklich hilft
 
 Coding-Agenten können plausible Paketnamen erfinden oder behaupten, eine Änderung sei geprüft, obwohl kein Prüflauf stattgefunden hat. [claude-faktencheck](https://github.com/CommsConnectgmbh/claude-faktencheck) setzt deshalb an verschiedenen Stellen an: bei der Belegpflicht, vor Paketinstallationen und vor dem Abschluss einer Aufgabe.
@@ -26,8 +28,8 @@ Beim sogenannten Slopsquatting registrieren Angreifer von KI erfundene Paketname
 
 | Baustein | Umsetzung | Grenze |
 |---|---|---|
-| [Skill `faktencheck`](../skills/faktencheck/SKILL.md) | Aktiviert mit `/faktencheck` die Belegpflicht. Erlaubt Nichtwissen, verlangt Zitate vor der Auswertung und streicht oder kennzeichnet unbelegte Aussagen. Zahlen sollen per Skript berechnet werden. | Ein Regeltext steuert das Modell, erzwingt aber keine korrekte Antwort. Ausschalten mit „Faktencheck aus“. |
-| [Agent `faktenpruefer`](../agents/faktenpruefer.md) | Prüft eine fertige Antwort mit frischem Kontext. Öffnet Quellen selbst und bewertet jede Behauptung als „bestätigt“, „falsch“ oder „nicht belegt“. Soll nichts ändern. | Auch der Prüfer ist ein Sprachmodell. Frischer Kontext ersetzt keine belastbaren Quellen. |
+| [Skill `faktencheck`](../skills/faktencheck/SKILL.md) | Aktiviert mit `/faktencheck` die Belegpflicht. Erlaubt Nichtwissen, verlangt Zitate vor der Auswertung und streicht oder kennzeichnet unbelegte Aussagen. Zahlen sollen per Skript berechnet werden. | Ein Regeltext steuert das Modell, erzwingt aber keine korrekte Antwort. Ausschalten mit „Faktencheck aus“ oder „fact check off“. |
+| [Agent `faktenpruefer`](../agents/faktenpruefer.md) | Prüft eine fertige Antwort mit frischem Kontext. Öffnet Quellen selbst und bewertet jede Behauptung als „confirmed“ (bestätigt), „false“ (falsch) oder „unsupported“ (nicht belegt). Soll nichts ändern. | Auch der Prüfer ist ein Sprachmodell. Frischer Kontext ersetzt keine belastbaren Quellen. |
 | [Paket-Hook](../hooks/paket-check.py) | Fragt vor erkannten Installationen über Bash die offiziellen Registries npm, PyPI und crates.io ab. Blockiert nicht vorhandene und zu junge Pakete. | Prüft Existenz und Alter, nicht Paketinhalt, API-Verhalten oder die Richtigkeit einer gewünschten Version. |
 | [Stop-Hook](../hooks/beleg-stopp.py) | Hält das Turn-Ende an, wenn nach einer erkannten Codeänderung kein Prüfschritt lief oder eine erkannte Erfolgsmeldung ohne Prüfschritt behauptet wird. | Erkennt Werkzeugaufrufe und Befehlsmuster. Bewertet weder deren Ergebnis noch, ob sie die konkrete Aussage belegen. |
 | [CLAUDE.md-Vorlage](../templates/CLAUDE.faktencheck.md) | Verankert Belegpflicht, Quellenarbeit, Rechnungen per Skript und unabhängige Prüfung im Projektkontext. | Bleibt eine Anweisung, die im langen Kontext übersehen werden kann. |

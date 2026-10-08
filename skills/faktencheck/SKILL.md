@@ -1,59 +1,59 @@
 ---
 name: faktencheck
-description: Belegpflicht-Modus gegen Halluzinationen. Jede Tatsachenbehauptung braucht eine Quelle (Datei, URL, Befehlsausgabe), Zitate kommen vor der Auswertung, Unbelegtes wird gestrichen oder als offen markiert, Zahlen werden per Skript gerechnet. Nutzen bei Recherche, Verträgen, Ausschreibungen, Fristen, Preisen, Zahlen, API- und Bibliotheksfragen und immer, wenn eine falsche Antwort teuer wäre. Trigger: "faktencheck", "mit Quellen", "belege das", "stimmt das wirklich", "keine Halluzinationen", "research mode", "cite sources", "fact check".
+description: Evidence-required mode to reduce hallucinations. Every factual claim needs a source (file, URL, or command output). Quote before analyzing, remove unsupported claims or mark them as unresolved, and calculate numbers with scripts. Use for research, contracts, tenders, deadlines, prices, numbers, API and library questions, and whenever a wrong answer would be costly. Triggers include "faktencheck", "mit Quellen", "belege das", "stimmt das wirklich", "keine Halluzinationen", "fact check", "cite sources", "research mode".
 ---
 
-# Faktencheck: Belegpflicht-Modus
+# Faktencheck: require evidence
 
-Ab jetzt gilt bis „Faktencheck aus“ oder bis zum Ende der Aufgabe:
+Apply these rules until the user says "Faktencheck aus" or "fact check off", or until the task ends:
 
-## 1. „Weiß ich nicht“ ist eine gültige Antwort
+## 1. "I don't know" is a valid answer
 
-Wenn du etwas nicht aus einer Quelle belegen kannst, sag das. Eine ehrliche Lücke ist hilfreicher als eine plausible Vermutung. Formulierung: „Nicht belegt: …“ plus was man prüfen müsste.
+If you cannot support something with a source, say so. An honest gap is more useful than a plausible guess. Write "Unsupported: ..." and explain what would need to be checked.
 
-## 2. Erst zitieren, dann auswerten
+## 2. Quote first, then analyze
 
-Bei Dokumenten (Verträge, PDFs, Ausschreibungen, Logs, Doku):
+When working with documents (contracts, PDFs, tenders, logs, documentation):
 
-1. Ziehe zuerst die relevanten Stellen **wörtlich** heraus, mit Fundort (`datei.pdf, Seite 4` / `src/auth.ts:88` / URL).
-2. Erst danach: Auswertung, die sich nur auf diese Zitate stützt.
-3. Findest du zu einem Punkt kein Zitat, gehört er nicht in die Auswertung.
+1. First extract the relevant passages **verbatim**, with their location (`file.pdf, page 4` / `src/auth.ts:88` / URL).
+2. Then analyze them, using only those quotes as the basis.
+3. If you cannot find a quote to support a point, leave it out of the analysis.
 
-## 3. Jede Behauptung bekommt eine Quelle
+## 3. Give every claim a source
 
-| Art der Aussage | Gilt als Beleg |
+| Type of claim | Acceptable evidence |
 |---|---|
-| Code, Konfiguration, Projektstand | Datei mit Zeilennummer, die du in dieser Sitzung gelesen hast |
-| Verhalten, „funktioniert“, „Tests grün“ | Ausgabe eines Befehls, den du in dieser Sitzung ausgeführt hast |
-| Bibliotheken, APIs, Paketnamen | Offizielle Doku oder Registry, in dieser Sitzung abgerufen |
-| Externe Fakten, Preise, Gesetze, Daten | URL der Primärquelle plus Abrufdatum |
-| Zahlen, Summen, Prozente, Zählungen | Skript, das du ausgeführt hast. Nie im Kopf rechnen |
+| Code, configuration, project state | A file with a line number that you read in this session |
+| Behavior, "it works", "tests pass" | Output from a command you ran in this session |
+| Libraries, APIs, package names | Official documentation or a registry retrieved in this session |
+| External facts, prices, laws, dates | The primary source's URL and the date you accessed it |
+| Numbers, totals, percentages, counts | A script you ran. Never calculate in your head |
 
-Trainingswissen ist kein Beleg für Dinge, die sich ändern (Preise, Versionen, API-Signaturen, Gesetze, Personen, Termine).
+Training knowledge is not evidence for things that change (prices, versions, API signatures, laws, people, schedules).
 
-## 4. Quellen in dieser Reihenfolge
+## 4. Check sources in this order
 
-1. Lokale Dateien (Grep, Read): billig und am verlässlichsten
-2. Befehle ausführen (Tests, `--help`, `pip show`, `npm view <paket>`)
-3. Websuche: Snippet reicht, wenn es die Aussage wörtlich trägt
-4. Volltext abrufen nur, wenn das Snippet mehrdeutig ist
+1. Local files (Grep, Read): inexpensive and most reliable
+2. Run commands (tests, `--help`, `pip show`, `npm view <package>`)
+3. Web search: a snippet is enough if it directly supports the claim
+4. Retrieve the full text only if the snippet is ambiguous
 
-## 5. Vor dem Abschicken: Gegenlesen
+## 5. Review before responding
 
-Gehe deine Antwort Satz für Satz durch:
+Go through your answer sentence by sentence:
 
-- Hat jede Tatsachenbehauptung eine Quelle aus Punkt 3?
-- Sagt die Quelle wirklich das, oder nur etwas Ähnliches?
-- Gibt es keine passende Quelle: Satz streichen oder als „Nicht belegt“ markieren.
+- Does every factual claim have a source of the kind listed in section 3?
+- Does the source actually say this, or only something similar?
+- If there is no suitable source, remove the sentence or mark it as "Unsupported".
 
-Bei wichtigen Ergebnissen (Vertrag, Frist, Preis, Release) zusätzlich den Agenten `faktenpruefer` mit frischem Kontext auf die Antwort ansetzen. Wer die Antwort geschrieben hat, prüft sie nicht selbst.
+For important results (contracts, deadlines, prices, releases), also ask the `faktenpruefer` agent to check the answer with fresh context. The author must not be the reviewer.
 
-## 6. Format der Antwort
+## 6. Response format
 
-- Aussagen mit Quelle in Klammern oder als Fußnote
-- Am Ende ein Block **Offen / nicht belegt**, auch wenn er leer ist („keine“)
-- Keine Schätzungen und keine Wertspannen ohne Quelle
+- Include sources in parentheses or footnotes.
+- End with an **Unresolved / unsupported** section, even if it is empty ("none").
+- Do not give estimates or ranges without a source.
 
-## Grenzen
+## Limitations
 
-Der Modus macht Antworten langsamer und länger. Für Brainstorming, Texte und kreative Arbeit ausschalten („Faktencheck aus“).
+This mode makes responses slower and longer. Turn it off for brainstorming, writing, and creative work ("Faktencheck aus" or "fact check off").

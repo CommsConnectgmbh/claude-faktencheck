@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
-"""PreToolUse-Hook: erfundene Pakete abfangen, bevor sie installiert werden.
+"""PreToolUse hook: catch invented packages before installation.
 
-Sprachmodelle erfinden Paketnamen, die plausibel klingen. Angreifer registrieren
-genau diese Namen und legen Schadcode hinein ("Slopsquatting"). Der Hook liest
-jeden Bash-Befehl, sucht darin Installationen (npm, pnpm, yarn, bun, npx, pip,
-uv, poetry, pipx, cargo) und fragt die offizielle Registry:
+Language models invent plausible package names. Attackers register those names
+and add malicious code ("slopsquatting"). The hook reads each Bash command,
+looks for installations (npm, pnpm, yarn, bun, npx, pip, uv, poetry, pipx,
+cargo), and queries the official registry:
 
-  * Paket existiert nicht        -> blockiert
-  * Paket juenger als 30 Tage    -> blockiert, bis es bewusst freigegeben wird
+  * Package does not exist       -> blocked
+  * Package is under 30 days old -> blocked until deliberately allowed
 
-Freigabe fuer einen einzelnen Befehl: `FAKTENCHECK_OK=1` direkt vor die
-Installation stellen (`FAKTENCHECK_OK=1 npm install x`).
-Hook komplett aus: Umgebungsvariable `FAKTENCHECK_AUS=1`.
+Allow a single command by prefixing the installation with `FAKTENCHECK_OK=1`
+(`FAKTENCHECK_OK=1 npm install x`).
+Disable the hook with the environment variable `FAKTENCHECK_AUS=1`.
 
-Befehle mit eigener Registry oder eigenem Paketindex (--registry, --index-url,
-.npmrc-Scope, pip.conf, uv-/poetry-Quellen) prueft der Hook nicht: Die
-oeffentliche Registry kennt solche Pakete nicht, und ihre Namen sollen sie auch
-nicht erfahren.
+Commands using custom registries or package indexes (--registry, --index-url,
+.npmrc scopes, pip.conf, uv or poetry sources) are not checked: public
+registries do not know these packages and should not receive their names.
 
-Nur Standardbibliothek. Netzfehler, Zeitueberschreitungen und alles
-Unerwartete lassen den Befehl durch (fail-open): Der Hook ist eine
-Bremsschwelle gegen Halluzinationen, keine Sicherheitsgrenze.
+Standard library only. Network errors, timeouts, and unexpected errors let
+the command proceed (fail-open): the hook creates a pause for review to
+counter hallucinations, not a security boundary.
 """
 import json
 import os
@@ -35,7 +34,7 @@ from datetime import datetime, timezone
 MIN_AGE_DAYS = int(os.environ.get("FAKTENCHECK_MIN_TAGE", "30"))
 TIMEOUT = 4
 MAX_PACKAGES = 8
-# Grosse Dokumente gehoeren zu etablierten Paketen; nicht komplett laden.
+# Large documents belong to established packages; do not load them in full.
 MAX_BYTES = 3_000_000
 USER_AGENT = "claude-faktencheck (+https://github.com/CommsConnectgmbh/claude-faktencheck)"
 
@@ -75,7 +74,7 @@ PY_INDEX_ENV = ("PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL", "UV_INDEX_URL", "UV_INDE
 
 
 class Word(str):
-    """Ein Shell-Wort ohne Quotes. `dynamic`: enthaelt $-Expansion oder Backticks."""
+    """A shell word without quotes. `dynamic`: contains $ expansion or backticks."""
 
     dynamic = False
 
@@ -89,17 +88,17 @@ def as_word(value):
 
 
 class Command(list):
-    """Ein einfacher Befehl. `scope`: Kette der offenen ( )-Subshells, in denen er steht."""
+    """A simple command. `scope`: chain of enclosing ( ) subshells."""
 
     scope = ()
 
 
 def tokenize(command):
-    """Zerlegt einen Bash-Befehl in einfache Befehle (Listen von Words).
+    """Split a Bash command into simple commands (lists of Words).
 
-    Beachtet Quotes, Backslashes, Kommentare, Zeilenumbrueche, Befehlstrenner
-    (; & | && || ( )), Umleitungen (> 2>&1 &> < <<<), deren Ziel verworfen wird,
-    und Here-Docs, deren Inhalt kein Befehl ist.
+    Handle quotes, backslashes, comments, line breaks, command separators
+    (; & | && || ( )), redirects (> 2>&1 &> < <<<) with discarded targets,
+    and here-documents, whose contents are not commands.
     """
     commands = []
     current = Command()
@@ -174,7 +173,7 @@ def tokenize(command):
         if c == "\n":
             end_command()
             i += 1
-            # Here-Doc-Inhalte bis zur Endmarke ueberspringen.
+            # Skip here-document contents up to the closing marker.
             while heredocs:
                 marker = heredocs.pop(0)
                 while i < n:
@@ -194,7 +193,7 @@ def tokenize(command):
             continue
         if c in "<>":
             if in_word and "".join(buf).isdigit():
-                buf, in_word = [], False  # Dateideskriptor wie 2>
+                buf, in_word = [], False  # File descriptor such as 2>
             else:
                 end_word()
             if command.startswith("<<<", i):
@@ -237,7 +236,7 @@ def tokenize(command):
 
 
 def strip_prefix(words):
-    """Entfernt Zuweisungen und Wrapper (sudo, env ...). Liefert (rest, zuweisungen)."""
+    """Remove assignments and wrappers (sudo, env ...). Return (remaining words, assignments)."""
     assigns, i = {}, 0
     while i < len(words):
         w = words[i]
@@ -276,7 +275,7 @@ def has_flag(args, names):
 
 
 def flag_values(args, names):
-    """Werte von Optionen in allen Schreibweisen: -p x, --package x, --package=x, -px."""
+    """Option values in all forms: -p x, --package x, --package=x, -px."""
     vals = []
     for k, a in enumerate(args):
         for f in names:
@@ -290,9 +289,9 @@ def flag_values(args, names):
 
 
 def runner_package(args, package_flags, value_flags):
-    """npx/bunx/dlx: explizite --package-Werte, sonst das erste Positionsargument.
+    """npx/bunx/dlx: explicit --package values, otherwise the first positional argument.
 
-    Alles nach dem ersten Positionsargument gehoert dem gestarteten Programm.
+    Everything after the first positional argument belongs to the launched program.
     """
     head, skip = [], False
     for a in args:
@@ -321,7 +320,7 @@ def npm_name(spec):
     if spec.startswith("@"):
         scope, _, rest = spec.partition("/")
         name = scope + "/" + rest.split("@", 1)[0] if rest else None
-    elif "/" in spec:  # github-Kurzform user/repo
+    elif "/" in spec:  # GitHub shorthand user/repo
         return None
     else:
         name = spec.split("@", 1)[0]
@@ -355,9 +354,9 @@ def read_lines(path):
 
 
 def requirements(path, depth=0):
-    """Paketnamen aus einer requirements-Datei, inklusive -r/--requirement-Verweisen.
+    """Package names from a requirements file, including -r/--requirement references.
 
-    Liefert None, wenn die Datei einen eigenen Index setzt.
+    Return None if the file sets a custom index.
     """
     names = []
     for line in read_lines(path):
@@ -369,7 +368,7 @@ def requirements(path, depth=0):
         nested = flag_values(line.split(), ("-r", "--requirement"))
         if nested:
             if depth >= 5:
-                return None  # zu tief verschachtelt: lieber nicht pruefen als privat abfragen
+                return None  # Nesting too deep: skip checking rather than query private names
             sub = requirements(os.path.join(os.path.dirname(path), nested[0]), depth + 1)
             if sub is None:
                 return None
@@ -399,7 +398,7 @@ def npmrc_text(cwd):
 
 
 def npm_private(name, npmrc):
-    """True, wenn das Paket ueber eine eigene Registry kommt (globale oder Scope-Registry)."""
+    """True if the package uses a custom registry (global or scoped)."""
     for line in npmrc.splitlines():
         line = line.strip()
         m = re.match(r"^registry\s*=\s*(\S+)", line)
@@ -436,7 +435,7 @@ def python_index_configured(cwd, assigns):
 
 
 def packages_in(words, cwd):
-    """Liefert (registry, name)-Paare fuer einen einfachen Befehl."""
+    """Return (registry, name) pairs for a simple command."""
     words, assigns = strip_prefix(words)
     if not words or "FAKTENCHECK_OK" in assigns and assigns["FAKTENCHECK_OK"] == "1":
         return []
@@ -506,7 +505,7 @@ def packages_in(words, cwd):
             return []
         found += [("crates", cargo_name(n)) for n in positional(args, CARGO_VALUE_FLAGS)]
 
-    # Ein Wort, das als Datei oder Ordner existiert, ist ein Pfad, kein Paketname.
+    # A word that exists as a file or directory is a path, not a package name.
     found = [(r, n) for r, n in found if n and not os.path.exists(os.path.join(cwd, n))]
     if any(r == "npm" for r, _ in found):
         for source in (os.environ, assigns):
@@ -522,15 +521,15 @@ def packages_in(words, cwd):
 
 
 def collect(command, cwd):
-    """Alle zu pruefenden Pakete eines Bash-Befehls, cd-Wechsel eingerechnet.
+    """All packages to check in a Bash command, accounting for cd changes.
 
-    Ein cd innerhalb einer ( )-Subshell gilt nur bis zu deren Ende.
+    A cd inside a ( ) subshell applies only until that subshell ends.
     """
     dirs = {(): cwd or os.getcwd()}
 
     def dir_for(scope):
         if scope not in dirs:
-            dirs[scope] = dir_for(scope[:-1])  # neue Subshell startet im Verzeichnis der Eltern
+            dirs[scope] = dir_for(scope[:-1])  # A new subshell starts in its parent directory
         return dirs[scope]
 
     pairs = []
@@ -569,7 +568,7 @@ def parse_time(value):
 
 
 def check(pair):
-    """None = in Ordnung oder nicht pruefbar, sonst Text mit dem Befund."""
+    """None = acceptable or cannot be checked; otherwise return a finding."""
     registry, name = pair
     if registry == "npm":
         url = "https://registry.npmjs.org/" + urllib.parse.quote(name, safe="@")
@@ -581,7 +580,7 @@ def check(pair):
         doc = fetch(url)
     except urllib.error.HTTPError as err:
         if err.code == 404:
-            return f"`{name}` gibt es auf {registry} nicht."
+            return f"`{name}` does not exist on {registry}."
         return None
     except Exception:
         return None
@@ -602,12 +601,12 @@ def check(pair):
         return None
     age = (datetime.now(timezone.utc) - created).days
     if age < MIN_AGE_DAYS:
-        return f"`{name}` ist erst {age} Tage auf {registry} (Grenze {MIN_AGE_DAYS})."
+        return f"`{name}` is only {age} days old on {registry} (minimum {MIN_AGE_DAYS})."
     return None
 
 
 def safe_check(pair):
-    """Ein Fehler bei einem Paket darf die Befunde der anderen nicht verwerfen."""
+    """An error checking one package must not discard findings for the others."""
     try:
         return check(pair)
     except Exception:
@@ -631,11 +630,11 @@ def main():
     if not findings:
         return 0
     sys.stderr.write(
-        "Paket-Check hat die Installation angehalten:\n- " + "\n- ".join(findings) + "\n"
-        "Erfundene oder frisch registrierte Paketnamen sind ein bekannter Angriffsweg (Slopsquatting). "
-        "Pruefe den Namen in der offiziellen Doku oder Registry, bevor du weitermachst. "
-        "Ist das Paket richtig und gewollt, stelle der Installation `FAKTENCHECK_OK=1` voran "
-        "(z. B. `FAKTENCHECK_OK=1 npm install x`) und sag dem Nutzer, warum.\n"
+        "Package check paused the installation:\n- " + "\n- ".join(findings) + "\n"
+        "Invented or newly registered package names are a known attack vector (slopsquatting). "
+        "Check the name in the official documentation or registry before proceeding. "
+        "If this is the correct package and you intend to use it, prefix the installation with `FAKTENCHECK_OK=1` "
+        "(e.g. `FAKTENCHECK_OK=1 npm install x`) and tell the user why.\n"
     )
     return 2
 

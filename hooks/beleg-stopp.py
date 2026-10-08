@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Stop-Hook: kein "fertig" ohne Beleg.
+"""Stop hook: no "done" without evidence.
 
-Liest das Transkript ab der letzten echten Nutzernachricht und haelt das Ende
-des Turns einmal an, wenn
+Read the transcript from the last genuine user message and pause the end
+of the turn once if
 
-  1. Code geaendert wurde (Edit/Write/NotebookEdit) und danach nichts lief,
-     das die Aenderung prueft (Test, Build, Lint, Skript, curl, Browser), oder
-  2. die Schlussantwort einen Erfolg behauptet ("Tests gruen", "verifiziert",
-     "ist live", "all tests pass" ...), im ganzen Turn aber kein Pruefschritt lief.
+  1. Code was changed (Edit/Write/NotebookEdit) without a subsequent check
+     of the change (test, build, lint, script, curl, browser), or
+  2. The final response claims success ("tests pass", "verified",
+     "is live", "all tests pass" ...), but no check ran during the turn.
 
-Claude bekommt dann den Hinweis, zu pruefen oder die Behauptung zurueckzunehmen.
-`stop_hook_active` verhindert eine Schleife: hoechstens ein Anstoss pro Turn.
-Hook aus: Umgebungsvariable `FAKTENCHECK_AUS=1`. Jeder Fehler laesst durch.
+Claude is prompted to verify the claim or retract it.
+`stop_hook_active` prevents a loop: at most one prompt per turn.
+Disable with the environment variable `FAKTENCHECK_AUS=1`. All errors fail open.
 """
 import json
 import os
@@ -24,9 +24,9 @@ CODE_EXT = re.compile(
     r"\.(tsx?|jsx?|mjs|cjs|py|swift|kts?|java|sql|go|rs|rb|php|css|scss|html|vue|svelte|astro|sh|zsh|"
     r"ps1|ya?ml|toml|c|cc|cpp|h|hpp|cs|dart|ex|exs|lua)$"
 )
-# Programme, deren Aufruf als Pruefschritt zaehlt. Bewertet wird das Programm am
-# Anfang jedes einfachen Befehls, nicht ein Wort irgendwo im Befehl: `echo pytest`
-# oder `cat npm.log` pruefen nichts.
+# Programs whose invocation counts as a check. Inspect the program at the start
+# of each simple command, not a word anywhere in it: `echo pytest`
+# and `cat npm.log` do not check anything.
 CHECK_PROGRAMS = {
     "test", "pytest", "py.test", "tox", "nox", "vitest", "jest", "mocha", "playwright", "cypress",
     "tsc", "eslint", "ruff", "mypy", "pyright", "flake8", "pylint", "shellcheck", "biome", "prettier",
@@ -55,7 +55,7 @@ HEREDOC = re.compile(r"<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n.*?^\s*\1\s*$", re.S | re
 
 
 def simple_commands(command):
-    """Zerlegt einen Bash-Befehl in einfache Befehle; Quotes, Kommentare und Here-Docs bleiben Text."""
+    """Split a Bash command into simple commands; quotes, comments, and here-documents remain text."""
     command = HEREDOC.sub("", command)
     for line in command.splitlines():
         lexer = shlex.shlex(line, posix=False, punctuation_chars=";&|()")
@@ -70,7 +70,7 @@ def simple_commands(command):
                     current = []
                 else:
                     current.append(token)
-        except ValueError:  # unvollstaendige Quotes, z. B. mehrzeiliger String
+        except ValueError:  # Incomplete quotes, e.g. a multiline string
             continue
         if current:
             yield current
@@ -92,7 +92,7 @@ def first_program(words):
 
 
 def runs_check(command):
-    """True, wenn ein einfacher Befehl in `command` ein Pruefprogramm startet."""
+    """True if a simple command in `command` starts a checking program."""
     for words in simple_commands(command):
         words = first_program(words)
         if not words:
@@ -127,7 +127,7 @@ NEGATION = re.compile(
 
 
 def negated(text, start):
-    """True, wenn vor der Fundstelle eine Verneinung steht ("nicht getestet", "not yet verified")."""
+    """True if a negation precedes the match ("not tested", "not yet verified")."""
     return bool(NEGATION.search(text[max(0, start - 30):start]))
 
 
@@ -175,16 +175,16 @@ def verdict(entries, last_message=None):
             last_edit, edited = i, path
     if last_edit >= 0 and not any(check_step(n, i) for n, i in calls[last_edit + 1:]):
         return (
-            f"Code geaendert ({os.path.basename(edited)}), danach lief aber nichts, das die Aenderung prueft. "
-            "Pruefe sie jetzt (Test, Build, Lint oder Live-Check). Geht das nicht, sag in einem Satz, "
-            "warum, und beende dann."
+            f"Code changed ({os.path.basename(edited)}), but no subsequent command or tool checked the change. "
+            "Check it now (test, build, lint, or live check). If you cannot, explain in one sentence "
+            "why, then finish."
         )
     claim = next((m for m in CLAIM.finditer(last_text or "") if not negated(last_text, m.start())), None)
     if claim and not any(check_step(n, i) for n, i in calls):
         return (
-            f"Deine Antwort behauptet \"{claim.group(0).strip()}\", in diesem Turn lief aber kein Pruefschritt. "
-            "Belege es jetzt mit einem echten Lauf (Test, Build, curl, Browser) oder nimm die Behauptung "
-            "zurueck und sag, was ungeprueft ist."
+            f"Your response claims \"{claim.group(0).strip()}\", but no verification step ran during this turn. "
+            "Support it now with an actual run (test, build, curl, browser), or retract the claim "
+            "and say what remains unchecked."
         )
     return None
 
