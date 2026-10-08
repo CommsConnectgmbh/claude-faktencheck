@@ -6,11 +6,28 @@
 
 claude-faktencheck adds an evidence-required mode, an independent fact-checking agent, and hooks for package installations and final responses to Claude Code. Free, MIT-licensed, and with no additional Python dependencies.
 
+![paket-check blocking invented package names](assets/demo.gif)
+
+This recording shows the real hook checking live registries; see [the recording script](assets/demo/record.sh).
+
 The skill, agent, and hook messages are in English. The names stay German as part of the project’s identity: `/faktencheck`, `faktenpruefer`, and the `FAKTENCHECK_*` environment variables. *Faktencheck* means “fact check,” and *Faktenprüfer* means “fact checker.”
 
 ## Installation
 
 Requirements: Claude Code and `python3`.
+
+Use only one installation method, otherwise the hooks run twice. Before switching from the install script to the plugin, run `./install.sh --uninstall`.
+
+### As a Claude Code plugin (recommended)
+
+```text
+/plugin marketplace add CommsConnectgmbh/claude-faktencheck
+/plugin install faktencheck@claude-faktencheck
+```
+
+The plugin installs the skill, agent, and both hooks. Manage updates through `/plugin`; remove it with `/plugin uninstall faktencheck@claude-faktencheck`.
+
+### With the install script
 
 ```bash
 git clone https://github.com/CommsConnectgmbh/claude-faktencheck
@@ -20,7 +37,7 @@ cd claude-faktencheck
 
 The installer copies the skill, agent, and optionally the hooks into `~/.claude`. Before changing an existing `settings.json`, it creates a backup named `settings.json.bak-faktencheck`. Reinstalling does not create duplicate hook entries.
 
-Then start a new Claude Code session.
+After either installation method, start a new Claude Code session.
 
 ## Usage
 

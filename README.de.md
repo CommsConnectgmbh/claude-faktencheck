@@ -6,11 +6,28 @@
 
 claude-faktencheck ergänzt Claude Code um einen Belegpflicht-Modus, einen unabhängigen Prüf-Agenten und Hooks für Paketinstallationen und Schlussantworten. Kostenlos, unter MIT-Lizenz und ohne zusätzliche Python-Abhängigkeiten.
 
+![paket-check blockiert erfundene Paketnamen](assets/demo.gif)
+
+Die Aufnahme zeigt den echten Hook bei der Prüfung gegen Live-Registries; siehe [Aufnahmeskript](assets/demo/record.sh).
+
 Skill, Agent und Hook-Meldungen sind auf Englisch. Deutsche Fassungen von Skill, Agent und CLAUDE.md-Regeln liegen in [templates/de](templates/de); wer sie nutzen will, kopiert sie nach der Installation über die englischen Dateien in `~/.claude`.
 
 ## Installation
 
 Voraussetzung: Claude Code und `python3`.
+
+Nutze nur einen Installationsweg, sonst laufen die Hooks doppelt. Wenn du vom Installationsskript auf das Plugin wechselst, führe vorher `./install.sh --uninstall` aus.
+
+### Als Claude-Code-Plugin (empfohlen)
+
+```text
+/plugin marketplace add CommsConnectgmbh/claude-faktencheck
+/plugin install faktencheck@claude-faktencheck
+```
+
+Das Plugin installiert Skill, Agent und beide Hooks mit den englischen Texten. Deutsche Fassungen liegen in [templates/de](templates/de). Updates verwaltest du über `/plugin`; entfernen kannst du das Plugin mit `/plugin uninstall faktencheck@claude-faktencheck`.
+
+### Mit dem Installationsskript
 
 ```bash
 git clone https://github.com/CommsConnectgmbh/claude-faktencheck
@@ -20,7 +37,7 @@ cd claude-faktencheck
 
 Der Installer kopiert Skill, Agent und auf Wunsch die Hooks nach `~/.claude`. Vor Änderungen an einer vorhandenen `settings.json` legt er `settings.json.bak-faktencheck` an. Hook-Einträge werden bei erneuter Installation nicht doppelt angelegt.
 
-Starte anschließend eine neue Claude-Code-Sitzung.
+Starte nach der Installation über einen der beiden Wege eine neue Claude-Code-Sitzung.
 
 ## So nutzt du es
 

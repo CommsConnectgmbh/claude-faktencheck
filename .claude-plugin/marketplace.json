@@ -1,0 +1,25 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-faktencheck",
+  "owner": {
+    "name": "Rainer Roloff",
+    "url": "https://rainerroloff.de"
+  },
+  "metadata": {
+    "description": "Fact-checking tools for Claude Code: evidence-required mode, independent checker agent, package and verification hooks."
+  },
+  "plugins": [
+    {
+      "name": "faktencheck",
+      "source": "./",
+      "description": "Evidence-required skill, independent fact-checking agent, hook against invented packages (npm, PyPI, crates.io) and Stop hook against unverified success claims.",
+      "author": {
+        "name": "Rainer Roloff",
+        "url": "https://rainerroloff.de"
+      },
+      "category": "security",
+      "homepage": "https://github.com/CommsConnectgmbh/claude-faktencheck",
+      "keywords": ["hallucination", "fact-checking", "slopsquatting", "supply-chain-security", "hooks"]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "description": "claude-faktencheck: block invented or brand-new packages before installation, and pause unverified success claims.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/paket-check.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/beleg-stopp.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

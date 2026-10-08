@@ -1,0 +1,13 @@
+{
+  "name": "faktencheck",
+  "version": "1.0.0",
+  "description": "Fewer hallucinations in Claude Code: evidence-required skill, independent fact-checking agent, a hook that blocks invented or brand-new packages (npm, PyPI, crates.io) and a Stop hook against unverified success claims.",
+  "author": {
+    "name": "Rainer Roloff",
+    "url": "https://rainerroloff.de"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/CommsConnectgmbh/claude-faktencheck",
+  "repository": "https://github.com/CommsConnectgmbh/claude-faktencheck",
+  "keywords": ["hallucination", "fact-checking", "slopsquatting", "supply-chain-security", "hooks", "verification"]
+}
